@@ -3,212 +3,262 @@ import {
   Drawer,
   Box,
   Typography,
-  IconButton,
   TextField,
+  IconButton,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Stack,
-  Divider,
+  MenuItem,
 } from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBackIos";
 import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
-import axios from "axios";
+import DeleteIcon from "@mui/icons-material/Remove";
+import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
 
-const SCHEMA_OPTIONS = [
-  { label: "First Name", value: "first_name", type: "user" },
-  { label: "Last Name", value: "last_name", type: "user" },
-  { label: "Gender", value: "gender", type: "user" },
-  { label: "Age", value: "age", type: "user" },
-  { label: "Account Name", value: "account_name", type: "group" },
-  { label: "City", value: "city", type: "group" },
-  { label: "State", value: "state", type: "group" },
-];
-
-export default function SegmentDrawer({ open, onClose }) {
+const SegmentDrawer = ({ open, onClose }) => {
   const [segmentName, setSegmentName] = useState("");
-  const [schemas, setSchemas] = useState([""]);
+  const [schemas, setSchemas] = useState([{ value: "" }]);
 
-  const handleAdd = () => setSchemas([...schemas, ""]);
-  const handleRemove = (index) => setSchemas(schemas.filter((_, i) => i !== index));
-  const handleChange = (index, val) => {
-    const updated = [...schemas];
-    updated[index] = val;
-    setSchemas(updated);
+const schemaOptions = [
+  { value: "first_name", label: "First Name", type: "user" },
+  { value: "last_name", label: "Last Name", type: "user" },
+  { value: "gender", label: "Gender", type: "user" },
+  { value: "age", label: "Age", type: "user" },
+  { value: "account_name", label: "Account Name", type: "group" },
+  { value: "city", label: "City", type: "group" },
+  { value: "state", label: "State", type: "group" },
+];
+  
+const webhookUrl = import.meta.env.VITE_WEBHOOK_URL;
+
+  const handleAddSchema = () => {
+    setSchemas([...schemas, { value: "" }]);
+  };
+
+  const handleRemoveSchema = (index) => {
+    const updatedSchemas = schemas.filter((_, i) => i !== index);
+    setSchemas(updatedSchemas);
+  };
+
+  const handleSchemaChange = (index, value) => {
+    if (schemas.some((schema, i) => schema.value === value && i !== index)) {
+      alert("This schema is already selected!");
+      return;
+    }
+
+    const updatedSchemas = schemas.map((schema, i) =>
+      i === index ? { ...schema, value } : schema
+    );
+    setSchemas(updatedSchemas);
   };
 
   const handleSave = async () => {
-    const schemaList = schemas
-      .filter(Boolean)
-      .map((val) => {
-        const opt = SCHEMA_OPTIONS.find((o) => o.value === val);
-        return opt ? { [opt.value]: opt.label } : null;
-      })
-      .filter(Boolean);
+    if (!segmentName.trim()) {
+      alert("Please enter the segment name");
+      return;
+    }
+
+    const selectedSchemas = schemas
+      .map((s) => s.value)
+      .filter((v) => v.trim() !== "");
+
+    if (selectedSchemas.length === 0) {
+      alert("Please select at least one schema");
+      return;
+    }
 
     const payload = {
-      segment_name: segmentName || "untitled_segment",
-      schema: schemaList,
-    };
-
+        segment_name: segmentName,
+        schema: selectedSchemas.map((s) => {
+          const option = schemaOptions.find((opt) => opt.value === s);
+          return { [option.value]: option.label };
+        }),
+      };
     try {
-      await axios.post("https://webhook.site/YOUR_WEBHOOK_ID", payload);
-      alert("Segment saved!");
+      await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        mode: "no-cors",
+      });
+
+      alert("Segment saved successfully!");
+      handleReset();
       onClose();
-    } catch (err) {
-      console.error(err);
-      alert("Error saving segment");
+    } catch (error) {
+      console.error("Error saving segment:", error);
+      alert("Something went wrong while saving the segment.");
     }
   };
 
+  const handleReset = () => {
+    setSegmentName("");
+    setSchemas([{ value: "" }]);
+  };
+
+  const handleCancel = () => {
+    handleReset();
+    onClose();
+  };
+
   return (
-    <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: { width: 400, borderTopLeftRadius: 2, borderBottomLeftRadius: 2 },
+    <Drawer anchor="right" open={open} onClose={handleCancel}>
+      <Box
+      sx={{
+        width: 400,
+        height: "100vh", 
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
       }}
     >
-      {/* Header */}
-      <Box
+    <Box
         sx={{
-          backgroundColor: "#4CB9B2",
+          backgroundColor: "#36A7A3",
           color: "white",
-          p: 2,
           display: "flex",
           alignItems: "center",
-          gap: 1,
+          p: 2,
+          mb: 2,
         }}
       >
-        <IconButton onClick={onClose} sx={{ color: "white" }}>
+        <IconButton
+          onClick={handleCancel}
+          sx={{ color: "white", mr: 1 }}
+        >
           <ArrowBackIcon />
         </IconButton>
         <Typography variant="h6">Saving Segment</Typography>
       </Box>
-
-      <Box p={3}>
-        <Typography mb={1}>Enter the Name of the Segment</Typography>
+      <Box sx={{
+              flex: 1,
+              overflowY: "auto",
+              p: 3,
+            }}>
+        <Typography variant="body1" sx={{ mb: 1 }}>
+          Enter the Name of the Segment
+        </Typography>
         <TextField
-          placeholder="Name of the segment"
           fullWidth
-          size="small"
+          placeholder="Name of the segment"
           value={segmentName}
           onChange={(e) => setSegmentName(e.target.value)}
+          sx={{ mb: 3 }}
         />
 
-        <Typography mt={3} mb={1}>
+        <Typography variant="body2" sx={{ mb: 2 }}>
           To save your segment, you need to add the schemas to build the query
         </Typography>
 
-        <Box display="flex" justifyContent="flex-end" mb={1}>
-            <Stack direction="row" spacing={2}>
-                <Typography color="green" variant="body2">
-                ● User Traits
-                </Typography>
-                <Typography color="red" variant="body2">
-                ● Group Traits
-                </Typography>
-            </Stack>
-        </Box>
-
-
-        <Stack spacing={2}>
-          {schemas.map((val, index) => {
-            const selected = SCHEMA_OPTIONS.find((o) => o.value === val);
-            return (
-              <Box
-                key={index}
-                sx={{
-                  border: "1px solid #ddd",
-                  borderRadius: 1,
-                  p: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1,
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    backgroundColor:
-                      selected?.type === "user"
-                        ? "green"
-                        : selected?.type === "group"
-                        ? "red"
-                        : "#ccc",
-                  }}
-                />
-                <FormControl fullWidth size="small">
-                  <InputLabel>Select schema</InputLabel>
-                  <Select
-                    value={val}
-                    label="Select schema"
-                    onChange={(e) => handleChange(index, e.target.value)}
-                  >
-                    <MenuItem value="">
-                      <em>None</em>
-                    </MenuItem>
-                    {SCHEMA_OPTIONS.map((opt) => (
-                      <MenuItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                {schemas.length > 1 && (
-                  <IconButton
-                    color="error"
-                    onClick={() => handleRemove(index)}
-                    size="small"
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                )}
-              </Box>
-            );
-          })}
+        <Stack direction="row" spacing={2} justifyContent="flex-end" mb={1}>
+          <Typography color="green" variant="body2">
+            ● User Traits
+          </Typography>
+          <Typography color="red" variant="body2">
+            ● Group Traits
+          </Typography>
         </Stack>
 
-        <Box mt={1}>
-          <Button
-            onClick={handleAdd}
-            startIcon={<AddIcon />}
-            sx={{ color: "#4CB9B2", textTransform: "none" }}
-          >
-            + Add new schema
-          </Button>
-        </Box>
+        {schemas.map((schema, index) => {
+          const selectedType = schemaOptions.find(
+            (s) => s.label === schema.value
+          )?.type;
 
-        <Divider sx={{ my: 3 }} />
+          const selectedValues = schemas.map((s) => s.value);
 
-        {/* Action Buttons */}
-        <Box display="flex" justifyContent="space-between">
-          <Button
-            variant="contained"
-            sx={{
-              backgroundColor: "#4CB9B2",
-              "&:hover": { backgroundColor: "#3CA49D" },
-            }}
-            onClick={handleSave}
-          >
-            Save the Segment
-          </Button>
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={onClose}
-            sx={{ textTransform: "none" }}
-          >
-            Cancel
-          </Button>
+          return (
+            <Stack
+              key={index}
+              direction="row"
+              alignItems="center"
+              spacing={1}
+              sx={{
+                border: "1px solid #ddd",
+                borderRadius: 1,
+                p: 1,
+                mb: 2,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: "50%",
+                  backgroundColor:
+                    selectedType === "user"
+                      ? "green"
+                      : selectedType === "group"
+                      ? "red"
+                      : "gray",
+                }}
+              />
+              <TextField
+                select
+                fullWidth
+                value={schema.value}
+                onChange={(e) => handleSchemaChange(index, e.target.value)}
+                displayEmpty
+                sx={{
+                  "& .MuiSelect-displayEmpty": {
+                    color: "#9e9e9e", 
+                  },
+                }}
+              >
+                 <MenuItem value="" disabled>Add schema to segment</MenuItem>
+                {schemaOptions.map((option, idx) => (
+                  <MenuItem
+                    key={idx}
+                    value={option.value}
+                    disabled={
+                      selectedValues.includes(option.value) && option.value !== schema.value
+                    }
+                  >
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              <IconButton onClick={() => handleRemoveSchema(index)}>
+                <DeleteIcon sx={{ color: "#9e9e9e" }} />
+              </IconButton>
+            </Stack>
+          );
+        })}
+
+        <Button
+          startIcon={<AddIcon />}
+          onClick={handleAddSchema}
+          sx={{ color: "#4CB9B2", mb: 3 }}
+        >
+          Add new schema
+        </Button>
         </Box>
-      </Box>
+        <Box
+      sx={{
+        borderTop: "1px solid #ddd",
+        p: 2,
+        display: "flex",
+        justifyContent: "flex-start",
+        gap: 2,
+        backgroundColor: "#fff",
+      }}
+    >
+      <Button
+        variant="contained"
+        sx={{
+          backgroundColor: "#4CB9B2",
+          "&:hover": { backgroundColor: "#3aa59c" },
+        }}
+        onClick={handleSave}
+      >
+        Save the Segment
+      </Button>
+
+      <Button variant="outlined" color="error" onClick={handleCancel}>
+        Cancel
+      </Button>
+    </Box>
+    </Box>
     </Drawer>
   );
-}
+};
+
+export default SegmentDrawer;

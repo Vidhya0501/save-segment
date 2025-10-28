@@ -1,15 +1,11 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Button,
-  Container,
-  Typography,
-  Backdrop,
-} from "@mui/material";
+import { Box, Button, Container, Typography, Backdrop } from "@mui/material";
 import SegmentDrawer from "./components/SegmentDrawer";
 
 export default function App() {
   const [open, setOpen] = useState(false);
+
+  const handleCloseDrawer = () => setOpen(false);
 
   return (
     <>
@@ -21,7 +17,8 @@ export default function App() {
           transition: "all 0.3s ease",
         }}
         open={open}
-        onClick={() => setOpen(false)}       />
+        onClick={handleCloseDrawer}
+      />
 
       <Box
         sx={{
@@ -77,7 +74,7 @@ export default function App() {
         </Container>
       </Box>
 
-      <SegmentDrawer open={open} onClose={() => setOpen(false)} />
+      <SegmentDrawer open={open} onClose={handleCloseDrawer} />
     </>
   );
 }
